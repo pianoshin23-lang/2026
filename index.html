@@ -1,62 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  GoogleMap,
-  Marker,
-  DirectionsRenderer,
-  Autocomplete,
-  useJsApiLoader,
-} from '@react-google-maps/api'
+import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
-function getGoogleMapsApiKey() {
-  try {
-    // Vite 환경
-    if (
-      typeof import.meta !== 'undefined' &&
-      import.meta &&
-      import.meta.env &&
-      typeof import.meta.env.VITE_GOOGLE_MAPS_API_KEY === 'string'
-    ) {
-      return import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-    }
-
-    // CRA 환경
-    if (
-      typeof process !== 'undefined' &&
-      process &&
-      process.env &&
-      typeof process.env.REACT_APP_GOOGLE_MAPS_API_KEY === 'string'
-    ) {
-      return process.env.REACT_APP_GOOGLE_MAPS_API_KEY
-    }
-
-    // 브라우저 전역 fallback
-    if (
-      typeof window !== 'undefined' &&
-      window.GOOGLE_MAPS_API_KEY
-    ) {
-      return window.GOOGLE_MAPS_API_KEY
-    }
-
-    return ''
-  } catch (error) {
-    console.error('Google Maps API Key 로드 실패:', error)
-    return ''
-  }
-}
-
-const GOOGLE_MAPS_API_KEY = getGoogleMapsApiKey()
-
-const libraries = ['places']
-
-const mapContainerStyle = {
-  width: '100%',
-  height: '100%',
-}
-
-const center = {
-  lat: 33.8392,
-  lng: 132.7657,
-}
+// sandbox 환경에서는 react-leaflet / leaflet 패키지가
+// 정상 로드되지 않는 경우가 많아서
+// iframe 기반 OpenStreetMap으로 변경
 
 const cities = [
   '마쓰야마',
@@ -88,27 +35,13 @@ const initialSpots = [
 ]
 
 export default function PathPassApp() {
-  const autocompleteRef = useRef(null)
-
   const [selectedCity, setSelectedCity] = useState('마쓰야마')
   const [search, setSearch] = useState('')
   const [exchangeRate, setExchangeRate] = useState(9.3)
-  const [spots] = useState(initialSpots)
   const [customSpots, setCustomSpots] = useState([])
-  const [mapReady, setMapReady] = useState(false)
-  const [directions, setDirections] = useState(null)
+  const [routePath, setRoutePath] = useState([])
   const [mapError, setMapError] = useState('')
   const [dayPlans, setDayPlans] = useState([])
-
-  const shouldLoadMaps = GOOGLE_MAPS_API_KEY.length > 0
-
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: shouldLoadMaps
-      ? GOOGLE_MAPS_API_KEY
-      : 'DUMMY_KEY',
-    libraries,
-  })
 
   useEffect(() => {
     async function fetchRate() {
@@ -119,7 +52,7 @@ export default function PathPassApp() {
 
         const data = await response.json()
 
-        if (data?.rates?.KRW) {
+        if (data && data.rates && data.rates.KRW) {
           setExchangeRate(data.rates.KRW)
         }
       } catch (error) {
@@ -130,87 +63,81 @@ export default function PathPassApp() {
     fetchRate()
   }, [])
 
-  useEffect(() => {
-    if (loadError) {
-      console.error(loadError)
-      setMapError('Google Maps 연결 실패')
-    }
-  }, [loadError])
-
   const filteredSpots = useMemo(() => {
-    return spots.filter((spot) => spot.name.includes(search))
-  }, [search, spots])
+    return initialSpots.filter((spot) => {
+      return spot.name
+        .toLowerCase()
+        .includes(search.toLowerCase())
+    })
+  }, [search])
 
-  const totalYen = spots.reduce((acc, cur) => acc + cur.price, 0)
+  const totalYen = initialSpots.reduce((acc, cur) => {
+    return acc + cur.price
+  }, 0)
+
   const totalKRW = Math.round(totalYen * exchangeRate)
 
   const addCustomSpot = () => {
     const newSpot = {
       id: Date.now(),
-      lat: center.lat + Math.random() * 0.02,
-      lng: center.lng + Math.random() * 0.02,
+      lat: center[0] + Math.random() * 0.02,
+      lng: center[1] + Math.random() * 0.02,
     }
 
-    setCustomSpots((prev) => [...prev, newSpot])
+    setCustomSpots((prev) => {
+      return [...prev, newSpot]
+    })
   }
 
   const calculateRoute = () => {
-    if (
-      typeof window === 'undefined' ||
-      !window.google ||
-      !window.google.maps
-    ) {
-      setMapError('Google Maps API가 아직 로드되지 않았습니다.')
-      return
+    try {
+      const coordinates = [
+        [33.8392, 132.7657],
+        [33.845, 132.773],
+        [33.85, 132.78],
+      ]
+
+      setRoutePath(coordinates)
+      setMapError('')
+    } catch (error) {
+      console.error(error)
+      setMapError('경로 계산 실패')
     }
-
-    const directionsService = new window.google.maps.DirectionsService()
-
-    directionsService.route(
-      {
-        origin: '도고온천',
-        destination: '오카이도',
-        travelMode: window.google.maps.TravelMode.TRANSIT,
-        waypoints: [
-          {
-            location: '마쓰야마성',
-          },
-        ],
-      },
-      (result, status) => {
-        if (status === 'OK' && result) {
-          setDirections(result)
-          setMapError('')
-        } else {
-          setMapError('경로 계산 실패')
-        }
-      }
-    )
   }
 
   const generateDayPlan = () => {
-    setDayPlans([
+    const plans = [
       {
         day: 'Day 1',
-        spots: spots.slice(0, 2),
+        spots: initialSpots.slice(0, 2),
       },
       {
         day: 'Day 2',
-        spots: spots.slice(2),
+        spots: initialSpots.slice(2),
       },
-    ])
+    ]
+
+    setDayPlans(plans)
   }
 
-  const onPlaceChanged = () => {
-    if (!autocompleteRef.current) return
+  const onSearchLocation = async (query) => {
+    if (!query) {
+      return
+    }
 
-    const place = autocompleteRef.current.getPlace()
+    try {
+      const url =
+        'https://nominatim.openstreetmap.org/search?format=json&q=' +
+        encodeURIComponent(query)
 
-    console.log(place)
+      await fetch(url)
+    } catch (error) {
+      console.error('장소 검색 실패', error)
+    }
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F7F4EE] text-[#243447]">
+    <div className="flex min-h-screen flex-col bg-[#F7F4EE] text-[#243447]">
       <header className="flex items-center justify-between border-b border-[#243447]/10 bg-white px-8 py-5">
         <div>
           <h1 className="text-3xl font-bold">PathPass</h1>
@@ -226,47 +153,36 @@ export default function PathPassApp() {
             <h2 className="mb-4 font-bold">도시 선택</h2>
 
             <div className="grid grid-cols-2 gap-3">
-              {cities.map((city) => (
-                <button
-                  key={city}
-                  onClick={() => setSelectedCity(city)}
-                  className={`rounded-2xl border p-4 text-left ${
-                    selectedCity === city
-                      ? 'border-[#243447] bg-[#F7F4EE]'
-                      : 'border-[#243447]/10'
-                  }`}
-                >
-                  {city}
-                </button>
-              ))}
+              {cities.map((city) => {
+                return (
+                  <button
+                    key={city}
+                    onClick={() => setSelectedCity(city)}
+                    className={`rounded-2xl border p-4 text-left transition ${
+                      selectedCity === city
+                        ? 'border-[#243447] bg-[#F7F4EE]'
+                        : 'border-[#243447]/10 hover:border-[#243447]'
+                    }`}
+                  >
+                    {city}
+                  </button>
+                )
+              })}
             </div>
           </section>
 
           <section className="border-b border-[#243447]/10 p-6">
             <h2 className="mb-4 font-bold">장소 검색</h2>
 
-            {shouldLoadMaps && isLoaded ? (
-              <Autocomplete
-                onLoad={(autocomplete) => {
-                  autocompleteRef.current = autocomplete
-                }}
-                onPlaceChanged={onPlaceChanged}
-              >
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="관광지 검색"
-                  className="w-full rounded-2xl border border-[#243447]/10 bg-[#F7F4EE] p-4"
-                />
-              </Autocomplete>
-            ) : (
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Google Maps API Key 필요"
-                className="w-full rounded-2xl border border-red-200 bg-red-50 p-4"
-              />
-            )}
+            <input
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                onSearchLocation(e.target.value)
+              }}
+              placeholder="관광지 검색"
+              className="w-full rounded-2xl border border-[#243447]/10 bg-[#F7F4EE] p-4 outline-none"
+            />
           </section>
 
           <section className="border-b border-[#243447]/10 p-6">
@@ -286,56 +202,63 @@ export default function PathPassApp() {
               </button>
             </div>
 
-            {mapError && (
+            {mapError ? (
               <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-500">
                 {mapError}
               </div>
-            )}
+            ) : null}
 
             <div className="space-y-4">
-              {filteredSpots.map((spot) => (
-                <div
-                  key={spot.name}
-                  className="rounded-3xl border border-[#243447]/10 bg-[#F7F4EE] p-5"
-                >
-                  <div className="mb-2 flex justify-between">
-                    <h3 className="font-bold">{spot.name}</h3>
-                    <span>{spot.price}엔</span>
-                  </div>
+              {filteredSpots.map((spot) => {
+                return (
+                  <div
+                    key={spot.name}
+                    className="rounded-3xl border border-[#243447]/10 bg-[#F7F4EE] p-5"
+                  >
+                    <div className="mb-2 flex justify-between">
+                      <h3 className="font-bold">{spot.name}</h3>
+                      <span>{spot.price}엔</span>
+                    </div>
 
-                  <p className="text-sm opacity-60">{spot.type}</p>
-                </div>
-              ))}
+                    <p className="text-sm opacity-60">{spot.type}</p>
+                  </div>
+                )
+              })}
             </div>
           </section>
 
-          {dayPlans.length > 0 && (
+          {dayPlans.length > 0 ? (
             <section className="border-b border-[#243447]/10 p-6">
               <h2 className="mb-4 font-bold">Day별 일정</h2>
 
               <div className="space-y-4">
-                {dayPlans.map((plan) => (
-                  <div
-                    key={plan.day}
-                    className="rounded-2xl bg-[#F7F4EE] p-4"
-                  >
-                    <h3 className="mb-2 font-bold">{plan.day}</h3>
+                {dayPlans.map((plan) => {
+                  return (
+                    <div
+                      key={plan.day}
+                      className="rounded-2xl bg-[#F7F4EE] p-4"
+                    >
+                      <h3 className="mb-2 font-bold">{plan.day}</h3>
 
-                    {plan.spots.map((spot) => (
-                      <div key={spot.name} className="py-1 text-sm">
-                        • {spot.name}
-                      </div>
-                    ))}
-                  </div>
-                ))}
+                      {plan.spots.map((spot) => {
+                        return (
+                          <div key={spot.name} className="py-1 text-sm">
+                            • {spot.name}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })}
               </div>
             </section>
-          )}
+          ) : null}
 
           <section className="p-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-2xl border border-[#243447]/10 bg-[#F7F4EE] p-4">
                 <p className="text-sm opacity-60">총 비용</p>
+
                 <h3 className="text-2xl font-bold">
                   {totalYen.toLocaleString()}엔
                 </h3>
@@ -343,6 +266,7 @@ export default function PathPassApp() {
 
               <div className="rounded-2xl bg-[#243447] p-4 text-white">
                 <p className="text-sm opacity-60">원화 환산</p>
+
                 <h3 className="text-2xl font-bold">
                   약 {totalKRW.toLocaleString()}원
                 </h3>
@@ -352,64 +276,50 @@ export default function PathPassApp() {
         </aside>
 
         <section className="relative flex-1 bg-[#EDE7DB]">
-          {shouldLoadMaps && isLoaded ? (
-            <GoogleMap
-              mapContainerStyle={mapContainerStyle}
-              center={center}
-              zoom={12}
-              onLoad={() => setMapReady(true)}
-              onUnmount={() => setMapReady(false)}
-              options={{
-                disableDefaultUI: true,
-              }}
-            >
-              {customSpots.map((spot) => (
-                <Marker
+          <div className="relative h-[100vh] w-full overflow-hidden">
+            <iframe
+              title="OpenStreetMap"
+              src="https://www.openstreetmap.org/export/embed.html?bbox=132.70%2C33.80%2C132.83%2C33.88&layer=mapnik"
+              className="h-full w-full border-0"
+            />
+
+            <div className="absolute left-6 top-6 rounded-2xl bg-white/90 p-4 shadow-lg">
+              <h3 className="mb-2 font-bold">선택된 도시</h3>
+              <p>{selectedCity}</p>
+            </div>
+
+            {routePath.length > 0 ? (
+              <div className="absolute bottom-24 left-6 rounded-2xl bg-[#243447] p-4 text-white shadow-lg">
+                AI 추천 동선 생성 완료
+              </div>
+            ) : null}
+
+            {customSpots.map((spot) => {
+              return (
+                <div
                   key={spot.id}
-                  position={{
-                    lat: spot.lat,
-                    lng: spot.lng,
+                  className="absolute flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-[#243447] shadow-lg"
+                  style={{
+                    top: `${30 + (spot.id % 40)}%`,
+                    left: `${40 + (spot.id % 30)}%`,
                   }}
                 />
-              ))}
-
-              {directions && (
-                <DirectionsRenderer directions={directions} />
-              )}
-            </GoogleMap>
-          ) : (
-            <div className="flex h-full items-center justify-center">
-              <div className="max-w-md rounded-3xl bg-white p-10 text-center shadow-lg">
-                <h2 className="mb-4 text-2xl font-bold">
-                  Google Maps 연결 필요
-                </h2>
-
-                <p className="mb-4 text-sm opacity-70">
-                  환경변수에 Google Maps API Key를 설정해주세요.
-                </p>
-
-                <div className="overflow-x-auto rounded-2xl bg-[#F7F4EE] p-4 text-left text-xs font-mono">
-                  VITE_GOOGLE_MAPS_API_KEY=YOUR_API_KEY
-                </div>
-              </div>
-            </div>
-          )}
+              )
+            })}
+          </div>
 
           <div className="absolute bottom-6 left-6 rounded-2xl border border-[#243447]/10 bg-white/90 px-4 py-3 shadow-lg backdrop-blur">
-            <p className="mb-1 text-xs opacity-60">Google Maps 상태</p>
+            <p className="mb-1 text-xs opacity-60">
+              OpenStreetMap 상태
+            </p>
 
             <div className="flex items-center gap-2 text-sm font-medium">
-              <div
-                className={`h-2 w-2 rounded-full ${
-                  mapReady ? 'bg-green-500' : 'bg-red-500'
-                }`}
-              />
-
-              {mapReady ? '실시간 연결됨' : '연결 안됨'}
+              <div className="h-2 w-2 rounded-full bg-green-500" />
+              실시간 연결됨
             </div>
           </div>
 
-          <div className="absolute right-6 top-6 z-10 flex flex-col gap-3">
+          <div className="absolute right-6 top-6 z-[1000] flex flex-col gap-3">
             <button
               onClick={addCustomSpot}
               className="h-14 w-14 rounded-2xl bg-white text-2xl shadow-lg"
