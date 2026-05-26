@@ -1,11 +1,114 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  GoogleMap,
+  Marker,
+  DirectionsRenderer,
+  Autocomplete,
+  useJsApiLoader,
+} from '@react-google-maps/api'
+
+function getGoogleMapsApiKey() {
+  try {
+    // Vite 환경
+    if (
+      typeof import.meta !== 'undefined' &&
+      import.meta &&
+      import.meta.env &&
+      typeof import.meta.env.VITE_GOOGLE_MAPS_API_KEY === 'string'
+    ) {
+      return import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+    }
+
+    // CRA 환경
+    if (
+      typeof process !== 'undefined' &&
+      process &&
+      process.env &&
+      typeof process.env.REACT_APP_GOOGLE_MAPS_API_KEY === 'string'
+    ) {
+      return process.env.REACT_APP_GOOGLE_MAPS_API_KEY
+    }
+
+    // 브라우저 전역 fallback
+    if (
+      typeof window !== 'undefined' &&
+      window.GOOGLE_MAPS_API_KEY
+    ) {
+      return window.GOOGLE_MAPS_API_KEY
+    }
+
+    return ''
+  } catch (error) {
+    console.error('Google Maps API Key 로드 실패:', error)
+    return ''
+  }
+}
+
+const GOOGLE_MAPS_API_KEY = getGoogleMapsApiKey()
+
+const libraries = ['places']
+
+const mapContainerStyle = {
+  width: '100%',
+  height: '100%',
+}
+
+const center = {
+  lat: 33.8392,
+  lng: 132.7657,
+}
+
+const cities = [
+  '마쓰야마',
+  '기타큐슈',
+  '가고시마',
+  '히로시마',
+  '다카마쓰',
+  '미야코지마',
+  '도쿠시마',
+  '구마모토',
+]
+
+const initialSpots = [
+  {
+    name: '도고온천',
+    type: '관광지',
+    price: 210,
+  },
+  {
+    name: '마쓰야마성',
+    type: '관광지',
+    price: 180,
+  },
+  {
+    name: '오카이도',
+    type: '쇼핑',
+    price: 240,
+  },
+]
 
 export default function PathPassApp() {
+  const autocompleteRef = useRef(null)
+
   const [selectedCity, setSelectedCity] = useState('마쓰야마')
   const [search, setSearch] = useState('')
   const [exchangeRate, setExchangeRate] = useState(9.3)
+  const [spots] = useState(initialSpots)
   const [customSpots, setCustomSpots] = useState([])
-  const [selectedCategory, setSelectedCategory] = useState('관광지')
+  const [mapReady, setMapReady] = useState(false)
+  const [directions, setDirections] = useState(null)
+  const [mapError, setMapError] = useState('')
+  const [dayPlans, setDayPlans] = useState([])
+
+  const shouldLoadMaps = GOOGLE_MAPS_API_KEY.length > 0
+
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: shouldLoadMaps
+      ? GOOGLE_MAPS_API_KEY
+      : 'DUMMY_KEY',
+    libraries,
+  })
 
   useEffect(() => {
     async function fetchRate() {
@@ -20,388 +123,299 @@ export default function PathPassApp() {
           setExchangeRate(data.rates.KRW)
         }
       } catch (error) {
-        console.error('환율 데이터를 불러오지 못했습니다.', error)
+        console.error('환율 데이터 로드 실패', error)
       }
     }
 
     fetchRate()
   }, [])
-  const cities = [
-    '마쓰야마',
-    '기타큐슈',
-    '가고시마',
-    '히로시마',
-    '다카마쓰',
-    '미야코지마',
-    '도쿠시마',
-    '구마모토',
-  ]
 
-  const spots = [
-    {
-      name: '도고온천',
-      type: '관광지',
-      price: 210,
-    },
-    {
-      name: '마쓰야마성',
-      type: '관광지',
-      price: 180,
-    },
-    {
-      name: '오카이도',
-      type: '쇼핑',
-      price: 240,
-    },
-  ]
+  useEffect(() => {
+    if (loadError) {
+      console.error(loadError)
+      setMapError('Google Maps 연결 실패')
+    }
+  }, [loadError])
 
   const filteredSpots = useMemo(() => {
-    return spots.filter((spot) => {
-      return spot.name.includes(search)
-    })
-  }, [search])
+    return spots.filter((spot) => spot.name.includes(search))
+  }, [search, spots])
 
   const totalYen = spots.reduce((acc, cur) => acc + cur.price, 0)
-
   const totalKRW = Math.round(totalYen * exchangeRate)
 
   const addCustomSpot = () => {
     const newSpot = {
       id: Date.now(),
-      title: `커스텀 스팟 ${customSpots.length + 1}`,
+      lat: center.lat + Math.random() * 0.02,
+      lng: center.lng + Math.random() * 0.02,
     }
 
-    setCustomSpotsof([...customSpots, newSpot])
+    setCustomSpots((prev) => [...prev, newSpot])
+  }
+
+  const calculateRoute = () => {
+    if (
+      typeof window === 'undefined' ||
+      !window.google ||
+      !window.google.maps
+    ) {
+      setMapError('Google Maps API가 아직 로드되지 않았습니다.')
+      return
+    }
+
+    const directionsService = new window.google.maps.DirectionsService()
+
+    directionsService.route(
+      {
+        origin: '도고온천',
+        destination: '오카이도',
+        travelMode: window.google.maps.TravelMode.TRANSIT,
+        waypoints: [
+          {
+            location: '마쓰야마성',
+          },
+        ],
+      },
+      (result, status) => {
+        if (status === 'OK' && result) {
+          setDirections(result)
+          setMapError('')
+        } else {
+          setMapError('경로 계산 실패')
+        }
+      }
+    )
+  }
+
+  const generateDayPlan = () => {
+    setDayPlans([
+      {
+        day: 'Day 1',
+        spots: spots.slice(0, 2),
+      },
+      {
+        day: 'Day 2',
+        spots: spots.slice(2),
+      },
+    ])
+  }
+
+  const onPlaceChanged = () => {
+    if (!autocompleteRef.current) return
+
+    const place = autocompleteRef.current.getPlace()
+
+    console.log(place)
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F4EE] text-[#243447] flex flex-col">
-      {/* Navbar */}
-      <header className="border-b border-[#243447]/10 bg-white/80 backdrop-blur-sm px-8 py-5 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-[#243447] text-white flex items-center justify-center font-bold text-lg">
-            P
-          </div>
-
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">PathPass</h1>
-            <p className="text-sm opacity-70">
-              일본 소도시 교통패스 최적화 플랫폼
-            </p>
-          </div>
+    <div className="min-h-screen flex flex-col bg-[#F7F4EE] text-[#243447]">
+      <header className="flex items-center justify-between border-b border-[#243447]/10 bg-white px-8 py-5">
+        <div>
+          <h1 className="text-3xl font-bold">PathPass</h1>
+          <p className="text-sm opacity-60">
+            일본 소도시 교통패스 최적화 플랫폼
+          </p>
         </div>
-
-        <nav className="flex gap-6 text-sm font-medium">
-          <button className="hover:opacity-70 transition">대시보드</button>
-          <button className="hover:opacity-70 transition">패스 비교</button>
-          <button className="hover:opacity-70 transition">AI 동선</button>
-        </nav>
       </header>
 
-      {/* Main Layout */}
       <main className="flex flex-1 overflow-hidden">
-        {/* Left Panel */}
-        <aside className="w-[380px] border-r border-[#243447]/10 bg-white flex flex-col overflow-y-auto">
-          {/* City Selection */}
-          <section className="p-6 border-b border-[#243447]/10">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">도시 선택</h2>
-              <span className="text-xs bg-[#243447] text-white px-2 py-1 rounded-full">
-                MVP
-              </span>
-            </div>
+        <aside className="w-[380px] overflow-y-auto border-r border-[#243447]/10 bg-white">
+          <section className="border-b border-[#243447]/10 p-6">
+            <h2 className="mb-4 font-bold">도시 선택</h2>
 
             <div className="grid grid-cols-2 gap-3">
               {cities.map((city) => (
                 <button
                   key={city}
-                  className={`border rounded-2xl p-4 text-left transition ${
+                  onClick={() => setSelectedCity(city)}
+                  className={`rounded-2xl border p-4 text-left ${
                     selectedCity === city
                       ? 'border-[#243447] bg-[#F7F4EE]'
-                      : 'border-[#243447]/10 hover:border-[#243447] hover:bg-[#F7F4EE]'
+                      : 'border-[#243447]/10'
                   }`}
-                  onClick={() => setSelectedCity(city)}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full bg-[#2E8B57]" />
-                    <span className="font-medium">{city}</span>
-                  </div>
+                  {city}
                 </button>
               ))}
             </div>
           </section>
 
-          {/* Search */}
-          <section className="p-6 border-b border-[#243447]/10">
-            <h2 className="text-lg font-bold mb-4">장소 검색</h2>
+          <section className="border-b border-[#243447]/10 p-6">
+            <h2 className="mb-4 font-bold">장소 검색</h2>
 
-            <div className="relative">
+            {shouldLoadMaps && isLoaded ? (
+              <Autocomplete
+                onLoad={(autocomplete) => {
+                  autocompleteRef.current = autocomplete
+                }}
+                onPlaceChanged={onPlaceChanged}
+              >
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="관광지 검색"
+                  className="w-full rounded-2xl border border-[#243447]/10 bg-[#F7F4EE] p-4"
+                />
+              </Autocomplete>
+            ) : (
               <input
-                type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="관광지, 카페, 맛집 검색"
-                className="w-full rounded-2xl border border-[#243447]/10 px-4 py-4 bg-[#F7F4EE] outline-none focus:border-[#243447]"
+                placeholder="Google Maps API Key 필요"
+                className="w-full rounded-2xl border border-red-200 bg-red-50 p-4"
               />
-            </div>
-
-            <div className="mt-5 flex gap-2 flex-wrap">
-              {['관광지', '카페', '맛집'].map((category) => (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`px-4 py-2 rounded-full text-sm transition ${
-                    selectedCategory === category
-                      ? 'bg-[#243447] text-white'
-                      : 'border border-[#243447]/10'
-                  }`}
-                >
-                  {category}
-                </button>
-              ))}
-            </div>
+            )}
           </section>
 
-          {/* Schedule */}
-          <section className="p-6 border-b border-[#243447]/10 flex-1">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold">AI 일정 동선</h2>
-              <button className="bg-[#243447] text-white px-4 py-2 rounded-xl text-sm">
-                AI 최적화
+          <section className="border-b border-[#243447]/10 p-6">
+            <div className="mb-4 flex gap-2">
+              <button
+                onClick={calculateRoute}
+                className="rounded-xl bg-[#243447] px-4 py-2 text-sm text-white"
+              >
+                AI 거리 계산
+              </button>
+
+              <button
+                onClick={generateDayPlan}
+                className="rounded-xl bg-[#2E8B57] px-4 py-2 text-sm text-white"
+              >
+                Day 생성
               </button>
             </div>
 
-            <div className="space-y-5">
-              {filteredSpots.map((spot, index) => (
-                <div key={spot.name} className="flex gap-4">
-                  {/* Railway Line */}
-                  <div className="flex flex-col items-center">
-                    <div className="w-4 h-4 rounded-full bg-[#1E90FF] border-4 border-white shadow" />
+            {mapError && (
+              <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-500">
+                {mapError}
+              </div>
+            )}
 
-                    {index !== spots.length - 1 && (
-                      <div className="w-[3px] h-28 bg-[#1E90FF]/40 rounded-full mt-2" />
-                    )}
+            <div className="space-y-4">
+              {filteredSpots.map((spot) => (
+                <div
+                  key={spot.name}
+                  className="rounded-3xl border border-[#243447]/10 bg-[#F7F4EE] p-5"
+                >
+                  <div className="mb-2 flex justify-between">
+                    <h3 className="font-bold">{spot.name}</h3>
+                    <span>{spot.price}엔</span>
                   </div>
 
-                  {/* Card */}
-                  <div className="flex-1 bg-[#F7F4EE] border border-[#243447]/10 rounded-3xl p-5 shadow-sm hover:shadow-md transition">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h3 className="font-bold text-lg">{spot.name}</h3>
-                        <p className="text-sm opacity-60">{spot.type}</p>
-                      </div>
-
-                      <div className="bg-white rounded-full px-3 py-1 text-sm border border-[#243447]/10">
-                        {spot.price}엔
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm opacity-70 mb-4">
-                      <span>09:30</span>
-                      <span>→</span>
-                      <span>버스 이동</span>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button className="px-3 py-2 rounded-xl bg-white border border-[#243447]/10 text-sm">
-                        메모
-                      </button>
-
-                      <button className="px-3 py-2 rounded-xl bg-white border border-[#243447]/10 text-sm">
-                        삭제
-                      </button>
-                    </div>
-                  </div>
+                  <p className="text-sm opacity-60">{spot.type}</p>
                 </div>
               ))}
             </div>
           </section>
 
-          {/* Pass Compare */}
-          <section className="p-6 border-b border-[#243447]/10">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">교통패스 비교</h2>
-              <span className="text-xs px-2 py-1 rounded-full bg-[#2E8B57] text-white">
-                추천
-              </span>
-            </div>
+          {dayPlans.length > 0 && (
+            <section className="border-b border-[#243447]/10 p-6">
+              <h2 className="mb-4 font-bold">Day별 일정</h2>
 
-            <div className="bg-[#243447] text-white rounded-3xl p-5 mb-4">
-              <div className="flex items-center justify-between mb-4">
-                <span className="opacity-70 text-sm">추천 패스</span>
-                <span className="text-xs bg-white/10 px-2 py-1 rounded-full">
-                  BEST
-                </span>
+              <div className="space-y-4">
+                {dayPlans.map((plan) => (
+                  <div
+                    key={plan.day}
+                    className="rounded-2xl bg-[#F7F4EE] p-4"
+                  >
+                    <h3 className="mb-2 font-bold">{plan.day}</h3>
+
+                    {plan.spots.map((spot) => (
+                      <div key={spot.name} className="py-1 text-sm">
+                        • {spot.name}
+                      </div>
+                    ))}
+                  </div>
+                ))}
               </div>
+            </section>
+          )}
 
-              <h3 className="text-xl font-bold mb-2">
-                Iyotetsu 1Day Pass
-              </h3>
-
-              <div className="space-y-2 text-sm opacity-90">
-                <div className="flex justify-between">
-                  <span>패스 가격</span>
-                  <span>1,200엔</span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span>일반 교통비</span>
-                  <span>1,840엔</span>
-                </div>
-
-                <div className="flex justify-between font-bold text-[#7CFC98]">
-                  <span>예상 절약</span>
-                  <span>640엔</span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Exchange */}
           <section className="p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-bold">실시간 환율</h2>
-              <span className="text-sm opacity-60">1엔 ≈ {exchangeRate.toFixed(2)}원</span>
-            </div>
-
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-[#F7F4EE] rounded-3xl p-5 border border-[#243447]/10">
-                <p className="text-sm opacity-60 mb-2">총 예상 비용</p>
-                <h3 className="text-2xl font-bold">{totalYen.toLocaleString()}엔</h3>
+              <div className="rounded-2xl border border-[#243447]/10 bg-[#F7F4EE] p-4">
+                <p className="text-sm opacity-60">총 비용</p>
+                <h3 className="text-2xl font-bold">
+                  {totalYen.toLocaleString()}엔
+                </h3>
               </div>
 
-              <div className="bg-[#243447] text-white rounded-3xl p-5">
-                <p className="text-sm opacity-70 mb-2">원화 환산</p>
-                <h3 className="text-2xl font-bold">약 {totalKRW.toLocaleString()}원</h3>
+              <div className="rounded-2xl bg-[#243447] p-4 text-white">
+                <p className="text-sm opacity-60">원화 환산</p>
+                <h3 className="text-2xl font-bold">
+                  약 {totalKRW.toLocaleString()}원
+                </h3>
               </div>
             </div>
           </section>
         </aside>
 
-        {/* Map Area */}
-        <section className="flex-1 relative overflow-hidden bg-[#EDE7DB]">
-          {/* Map Placeholder */}
-          <div className="absolute inset-0">
-            <div className="w-full h-full relative">
-              {/* Fake Grid */}
-              <div className="absolute inset-0 opacity-20 bg-[linear-gradient(to_right,#243447_1px,transparent_1px),linear-gradient(to_bottom,#243447_1px,transparent_1px)] bg-[size:60px_60px]" />
-
-              {/* Route Line */}
-              <svg
-                className="absolute inset-0 w-full h-full"
-                viewBox="0 0 1000 700"
-                fill="none"
-              >
-                <path
-                  d="M120 120 C 240 180, 280 240, 400 280 S 620 420, 760 500"
-                  stroke="#1E90FF"
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray="12 12"
+        <section className="relative flex-1 bg-[#EDE7DB]">
+          {shouldLoadMaps && isLoaded ? (
+            <GoogleMap
+              mapContainerStyle={mapContainerStyle}
+              center={center}
+              zoom={12}
+              onLoad={() => setMapReady(true)}
+              onUnmount={() => setMapReady(false)}
+              options={{
+                disableDefaultUI: true,
+              }}
+            >
+              {customSpots.map((spot) => (
+                <Marker
+                  key={spot.id}
+                  position={{
+                    lat: spot.lat,
+                    lng: spot.lng,
+                  }}
                 />
-              </svg>
+              ))}
 
-              {/* Map Pins */}
-              <div className="absolute top-[18%] left-[12%]">
-                <div className="bg-white px-4 py-3 rounded-2xl shadow-xl border border-[#243447]/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 rounded-full bg-[#1E90FF]" />
-                    <div>
-                      <p className="font-bold">도고온천</p>
-                      <p className="text-xs opacity-60">Day 1</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="absolute top-[40%] left-[42%]">
-                <div className="bg-white px-4 py-3 rounded-2xl shadow-xl border border-[#243447]/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 rounded-full bg-[#2E8B57]" />
-                    <div>
-                      <p className="font-bold">마쓰야마성</p>
-                      <p className="text-xs opacity-60">Day 1</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="absolute top-[68%] left-[72%]">
-                <div className="bg-white px-4 py-3 rounded-2xl shadow-xl border border-[#243447]/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 rounded-full bg-[#E85D5D]" />
-                    <div>
-                      <p className="font-bold">오카이도</p>
-                      <p className="text-xs opacity-60">Day 1</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Floating Controls */}
-              <div className="absolute top-6 right-6 flex flex-col gap-3">
-                <button
-                  onClick={addCustomSpot}
-                  className="w-14 h-14 rounded-2xl bg-white shadow-lg border border-[#243447]/10 text-2xl font-light hover:scale-105 transition"
-                >
-                  +
-                </button>
-
-                <button className="w-14 h-14 rounded-2xl bg-white shadow-lg border border-[#243447]/10 text-xl">
-                  📍
-                </button>
-
-                <button className="w-14 h-14 rounded-2xl bg-white shadow-lg border border-[#243447]/10 text-xl">
-                  🚌
-                </button>
-              </div>
-
-              {/* Map Bottom Card */}
-              <div className="absolute bottom-8 left-8 right-8">
-                <div className="bg-white/90 backdrop-blur rounded-3xl border border-[#243447]/10 p-6 shadow-2xl flex items-center justify-between">
-                  <div>
-                    <p className="text-sm opacity-60 mb-1">
-                      AI 추천 이동 루트
-                    </p>
-
-                    <h3 className="text-2xl font-bold mb-2">
-                      도고온천 → 마쓰야마성 → 오카이도
-                    </h3>
-
-                    <div className="flex gap-6 text-sm opacity-70">
-                      <span>총 이동시간 52분</span>
-                      <span>버스 3회</span>
-                      <span>패스 사용 추천</span>
-                    </div>
-                  </div>
-
-                  <button className="bg-[#243447] text-white px-6 py-4 rounded-2xl font-medium hover:opacity-90 transition">
-                    일정 저장
-                  </button>
-                </div>
-              </div>
-
-              {customSpots.length > 0 && (
-                <div className="absolute top-24 right-28 space-y-4">
-                  {customSpots.map((spot) => (
-                    <div
-                      key={spot.id}
-                      className="bg-white px-4 py-3 rounded-2xl shadow-xl border border-[#243447]/10"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-4 h-4 rounded-full bg-[#243447]" />
-                        <div>
-                          <p className="font-bold">{spot.title}</p>
-                          <p className="text-xs opacity-60">
-                            사용자 지정 장소
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              {directions && (
+                <DirectionsRenderer directions={directions} />
               )}
+            </GoogleMap>
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <div className="max-w-md rounded-3xl bg-white p-10 text-center shadow-lg">
+                <h2 className="mb-4 text-2xl font-bold">
+                  Google Maps 연결 필요
+                </h2>
+
+                <p className="mb-4 text-sm opacity-70">
+                  환경변수에 Google Maps API Key를 설정해주세요.
+                </p>
+
+                <div className="overflow-x-auto rounded-2xl bg-[#F7F4EE] p-4 text-left text-xs font-mono">
+                  VITE_GOOGLE_MAPS_API_KEY=YOUR_API_KEY
+                </div>
+              </div>
             </div>
+          )}
+
+          <div className="absolute bottom-6 left-6 rounded-2xl border border-[#243447]/10 bg-white/90 px-4 py-3 shadow-lg backdrop-blur">
+            <p className="mb-1 text-xs opacity-60">Google Maps 상태</p>
+
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <div
+                className={`h-2 w-2 rounded-full ${
+                  mapReady ? 'bg-green-500' : 'bg-red-500'
+                }`}
+              />
+
+              {mapReady ? '실시간 연결됨' : '연결 안됨'}
+            </div>
+          </div>
+
+          <div className="absolute right-6 top-6 z-10 flex flex-col gap-3">
+            <button
+              onClick={addCustomSpot}
+              className="h-14 w-14 rounded-2xl bg-white text-2xl shadow-lg"
+            >
+              +
+            </button>
           </div>
         </section>
       </main>
