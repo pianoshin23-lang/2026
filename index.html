@@ -1,1 +1,85 @@
+<!DOCTYPE html>
 
+      <section>
+        <h2>장소 검색</h2>
+
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="관광지 검색"
+        />
+      </section>
+
+      <section>
+        <div class="button-row">
+
+          <button id="routeBtn">
+            AI 동선 생성
+          </button>
+
+          <button id="dayBtn">
+            Day 생성
+          </button>
+
+        </div>
+      </section>
+
+      <section>
+
+        <div class="price-card">
+          <p>총 이동 비용</p>
+          <h3>630엔</h3>
+        </div>
+
+        <div class="price-card dark">
+          <p>원화 환산</p>
+          <h3 id="krwPrice">불러오는 중...</h3>
+        </div>
+
+      </section>
+
+      <section>
+        <h2>추천 스팟</h2>
+
+        <div class="spot-list">
+
+          <div class="spot-card">
+            <h3>도고온천</h3>
+            <p>관광지 · 210엔</p>
+          </div>
+
+          <div class="spot-card">
+            <h3>마쓰야마성</h3>
+            <p>관광지 · 180엔</p>
+          </div>
+
+          <div class="spot-card">
+            <h3>오카이도</h3>
+            <p>쇼핑 · 240엔</p>
+          </div>
+
+        </div>
+      </section>
+
+    </aside>
+
+    <main class="map-area">
+
+      <div id="map"></div>
+
+      <div class="map-status">
+        OpenStreetMap 실시간 연결됨
+      </div>
+
+      <button id="addSpotBtn">
+        +
+      </button>
+
+    </main>
+
+  </div>
+
+  <script src="script.js"></script>
+
+</body>
+</html>
