@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useEffect, useMemo, useState } from 'react'
 
-// sandbox 환경에서는 react-leaflet / leaflet 패키지가
-// 정상 로드되지 않는 경우가 많아서
-// iframe 기반 OpenStreetMap으로 변경
+// iframe 기반 OpenStreetMap 사용
+// react-leaflet 제거로 sandbox 빌드 오류 방지
+
+const center = [33.8392, 132.7657]
 
 const cities = [
   '마쓰야마',
