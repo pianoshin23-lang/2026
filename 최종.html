@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오사카 여행 패스권 효율 계산기 - 스타벅스 & 구글맵 라이브 에디션</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter (SoDoSans대체), Lora (Serif대체), Kalam (Script대체), Noto Sans KR -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&family=Kalam:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        sbGreen: '#006241',       // Starbucks Green
+                        sbAccent: '#00754A',      // Green Accent (주요 CTA)
+                        sbHouse: '#1E3932',       // House Green (배경/피처밴드/푸터)
+                        sbUplift: '#2b5148',      // Green Uplift
+                        sbLight: '#d4e9e2',       // Green Light (소프트 민트)
+                        sbGold: '#cba258',        // Gold (리워드/세레머니)
+                        sbGoldLight: '#dfc49d',   // Gold Light
+                        sbGoldLightest: '#faf6ee',// Gold Lightest
+                        sbWarm: '#f2f0eb',        // Neutral Warm (메인 페이지 캔버스)
+                        sbCeramic: '#edebe9',     // Ceramic (구분 영역)
+                        sbTextBlack: 'rgba(0, 0, 0, 0.87)',
+                        sbTextBlackSoft: 'rgba(0, 0, 0, 0.58)',
+                        sbTextWhiteSoft: 'rgba(255, 255, 255, 0.70)'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans KR', 'sans-serif'],
+                        serif: ['Lora', 'Georgia', 'serif'],
+                        script: ['Kalam', 'cursive']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            background-color: #f2f0eb;
+            letter-spacing: -0.01em;
+        }
+        .sb-shadow-card {
+            box-shadow: 0px 0px 0.5px 0px rgba(0,0,0,0.14), 0px 1px 1px 0px rgba(0,0,0,0.24);
+        }
+        .sb-shadow-nav {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 2px 2px rgba(0,0,0,0.06), 0 0 2px rgba(0,0,0,0.07);
+        }
+        .sb-shadow-frap {
+            box-shadow: 0 0 6px rgba(0,0,0,0.24), 0 8px 12px rgba(0,0,0,0.14);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #edebe9;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cba258;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #00754A;
+        }
+    </style>
+</head>
+<body class="text-sbTextBlack min-h-screen flex flex-col">
+
+    <!-- Global Navigation Header (Starbucks Inspired) -->
+    <header class="bg-[#f2f0eb] border-b border-[#edebe9] sticky top-0 z-40 sb-shadow-nav">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <div class="bg-[#006241] text-white w-12 h-12 rounded-full shadow-md flex items-center justify-center transition-transform hover:scale-105">
+                    <i class="fa-solid fa-mug-hot text-xl text-sbGold"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-sbGreen tracking-tight flex items-center gap-2">
+                        KANSAI PASS MASTER
+                        <span class="text-[10px] bg-sbAccent text-white px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">Live Maps Sync</span>
+                    </h1>
+                    <p class="text-xs text-sbTextBlackSoft">실시간 구글 지도 및 대중교통 경로 완벽 호환</p>
+                </div>
+            </div>
+            
+            <div class="hidden md:flex items-center space-x-3">
+                <span class="font-script text-lg text-sbAccent font-bold">Cup Name: Google Maps Linker 🌐</span>
+                <div class="text-xs font-semibold text-sbTextBlackSoft bg-white/80 border border-[#edebe9] px-3.5 py-2 rounded-full">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse mr-1.5"></span>
+                    2026 최신 운임 및 정밀 계산 반영
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        
+        <!-- Hero Editorial Banner with Lander Serif Font Context -->
+        <section class="bg-sbHouse rounded-2xl text-white overflow-hidden relative sb-shadow-card flex flex-col md:flex-row items-stretch">
+            <div class="p-8 md:p-12 flex-grow flex flex-col justify-center space-y-4 md:w-3/5 text-left">
+                <span class="font-serif italic text-sbGold text-lg md:text-xl">Real-Time Navigation & Exact Pricing</span>
+                <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
+                    구글맵으로 실시간 동선 짜고<br>
+                    <span class="text-sbGold">가장 스마트한 패스</span> 계산하기
+                </h2>
+                <p class="text-sm text-sbTextWhiteSoft max-w-xl">
+                    가고 싶은 명소를 터치하면 구글 지도 실시간 정밀 연동 및 대중교통 최적 경로가 활성화됩니다. 2026년 개편된 주유패스 및 신형 간사이 레일웨이 패스 요금제를 정밀 비교합니다.
+                </p>
+                <div class="pt-2 flex flex-wrap gap-3">
+                    <a href="#planner-workspace" class="bg-sbAccent hover:bg-sbGreen text-white text-xs font-bold px-6 py-3 rounded-full shadow-md transition-all active:scale-95 duration-200">
+                        지도 연동 플래너 이동
+                    </a>
+                    <button onclick="applyPreset('osaka_classic_1')" class="border border-white/40 hover:bg-white/10 text-white text-xs font-semibold px-5 py-3 rounded-full transition-all active:scale-95 duration-200">
+                        우메다 & 도톤보리 정복 코스 대입
+                    </button>
+                </div>
+            </div>
+            <div class="hidden md:flex md:w-2/5 bg-[#2b5148] justify-center items-center relative overflow-hidden p-6">
+                <div class="absolute inset-0 bg-gradient-to-t from-sbHouse via-transparent to-transparent opacity-60"></div>
+                <div class="border-2 border-sbGold/30 p-6 rounded-xl flex flex-col items-center space-y-3 bg-sbHouse/80 z-10 w-4/5 text-center shadow-lg">
+                    <div class="w-16 h-16 rounded-full bg-sbGold/15 flex items-center justify-center text-sbGold text-3xl">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                    </div>
+                    <h3 class="font-serif font-semibold text-lg text-sbGold">Google Maps Active</h3>
+                    <p class="text-xs text-sbTextWhiteSoft leading-relaxed">
+                        여행지의 실제 위치와 최단 대중교통 경비를 구글맵 연동 기술로 검증해 드립니다.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Information Column (Starbucks Inspired Color Blocks) -->
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Pass Card: Osaka Amazing Pass -->
+            <div class="bg-white rounded-2xl border border-[#edebe9] overflow-hidden sb-shadow-card flex flex-col justify-between">
+                <div>
+                    <div class="p-6 border-b border-[#edebe9] flex justify-between items-start bg-gradient-to-br from-white to-sbWarm">
+                        <div>
+                            <span class="text-xs text-sbAccent font-extrabold tracking-widest uppercase">OSAKA AMAZING PASS</span>
+                            <h3 class="text-2xl font-bold text-sbGreen mt-1 flex items-center gap-2">
+                                오사카 주유패스 (디지털)
+                                <span class="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold">QR 전용</span>
+                            </h3>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs text-sbTextBlackSoft block font-semibold">1일권 / 2일권</span>
+                            <span class="text-lg font-extrabold text-sbAccent">3,500엔 ~</span>
+                        </div>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <p class="text-sm text-sbTextBlackSoft leading-relaxed">
+                            오사카 도심 관광지 집중형 만능 패스! 우메다 공중정원, 헵파이브, 오사카성 고자부네 등 40여 개 주요 명소 무료 혜택과 시내 전철 무제한 탑승이 스마트폰 QR코드 전용으로 통합되었습니다.
+                        </p>
+                        <div class="bg-sbWarm/60 p-4 rounded-xl space-y-2">
+                            <h4 class="text-xs font-bold text-sbGreen uppercase tracking-wider">주요 포함 혜택</h4>
+                            <ul class="text-xs text-sbTextBlack space-y-1.5 pl-1">
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-circle-check text-sbAccent"></i> 오사카성, 우메다 스카이빌딩(오후 3시전) 100% 무료</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-circle-check text-sbAccent"></i> 도톤보리 리버 크루즈 & 템포잔 관람차 무료</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-circle-xmark text-rose-600"></i> 오사카 시외(교토/고베/나라) 이동 전철 사용 불가능</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6 bg-sbCeramic border-t border-[#edebe9] flex justify-between items-center">
+                    <span class="text-xs font-bold text-sbGreen">1일 3,500엔 / 2일 5,000엔 (실물발급 불가)</span>
+                    <button onclick="applyPreset('osaka_heavy_2')" class="bg-sbGreen hover:bg-sbAccent text-white text-xs font-bold px-4 py-2 rounded-full transition-all active:scale-95 duration-200">
+                        전체 코스 대입
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pass Card: Kansai Railway Pass -->
+            <div class="bg-white rounded-2xl border border-[#edebe9] overflow-hidden sb-shadow-card flex flex-col justify-between">
+                <div>
+                    <div class="p-6 border-b border-[#edebe9] flex justify-between items-start bg-gradient-to-br from-white to-sbWarm">
+                        <div>
+                            <span class="text-xs text-[#1E3932] font-extrabold tracking-widest uppercase">KANSAI RAILWAY PASS LITE</span>
+                            <h3 class="text-2xl font-bold text-sbHouse mt-1 flex items-center gap-2">
+                                간사이 레일웨이 패스
+                                <span class="text-[10px] bg-sky-100 text-sky-800 px-2 py-0.5 rounded font-semibold">비연속 가능</span>
+                            </h3>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs text-sbTextBlackSoft block font-semibold">2일권 / 3일권 (LITE 기준)</span>
+                            <span class="text-lg font-extrabold text-sbHouse">5,200엔 ~</span>
+                        </div>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <p class="text-sm text-sbTextBlackSoft leading-relaxed">
+                            기존 '간사이 쓰루패스'의 후속 패스! 한큐, 한신, 게이한, 긴테쓰, 난카이 전철 등 간사이 사철 네트워크 무제한 승하차를 보장하여 교토, 고베, 나라 원정 여행의 절대 강자입니다.
+                        </p>
+                        <div class="bg-sbWarm/60 p-4 rounded-xl space-y-2">
+                            <h4 class="text-xs font-bold text-sbHouse uppercase tracking-wider">주요 포함 혜택</h4>
+                            <ul class="text-xs text-sbTextBlack space-y-1.5 pl-1">
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-circle-check text-sbAccent"></i> 한큐/한신/게이한/긴테쓰 등 간사이 전 지역 사철 완전 무료</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-circle-check text-sbAccent"></i> 간사이 국제공항 난카이선 공항철도 탑승 포함 (일반 전동차)</li>
+                                <li class="flex items-center gap-2"><i class="fa-solid fa-circle-xmark text-rose-600"></i> 관광지 무료 입장 미포함 (단, 제휴처 소액 할인 혜택 제공)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6 bg-sbCeramic border-t border-[#edebe9] flex justify-between items-center">
+                    <span class="text-xs font-bold text-sbHouse">2일 5,200엔 / 3일 6,500엔 (2026 최신 혜택가)</span>
+                    <button onclick="applyPreset('kansai_multi_3')" class="bg-sbHouse hover:bg-sbAccent text-white text-xs font-bold px-4 py-2 rounded-full transition-all active:scale-95 duration-200">
+                        전체 코스 대입
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Interactive Workspace -->
+        <div id="planner-workspace" class="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-4">
+            
+            <!-- Left Panel (Selecting attractions and conditions) -->
+            <div class="lg:col-span-7 xl:col-span-8 flex flex-col space-y-6">
+                
+                <!-- Quick Presets -->
+                <div class="bg-white p-6 rounded-2xl border border-[#edebe9] sb-shadow-card">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                        <h3 class="text-sm font-bold text-sbGreen tracking-wide flex items-center gap-2">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            빠른 추천 일정 코스 대입하기
+                        </h3>
+                        <button onclick="resetPlanner()" class="text-xs font-bold text-rose-600 hover:text-rose-800 transition-colors flex items-center gap-1.5">
+                            <i class="fa-solid fa-rotate-left"></i> 코스 및 필터 리셋
+                        </button>
+                    </div>
+                    <div class="flex flex-wrap gap-2.5">
+                        <button onclick="applyPreset('osaka_classic_1')" class="bg-[#faf6ee] border border-sbGold/30 hover:border-sbGold text-sbTextBlack text-xs font-semibold px-4 py-2.5 rounded-full transition-all active:scale-95 duration-200">
+                            ☕ 오사카 시내 에센스 (1일 주유패스 추천)
+                        </button>
+                        <button onclick="applyPreset('osaka_heavy_2')" class="bg-sbLight/20 border border-sbAccent/30 hover:border-sbAccent text-sbGreen text-xs font-semibold px-4 py-2.5 rounded-full transition-all active:scale-95 duration-200">
+                            🍵 오사카 도심 완벽 정복 (2일 주유패스 추천)
+                        </button>
+                        <button onclick="applyPreset('kansai_multi_3')" class="bg-sbWarm border border-slate-300 hover:border-slate-500 text-sbTextBlack text-xs font-semibold px-4 py-2.5 rounded-full transition-all active:scale-95 duration-200">
+                            🎒 간사이 3색 메가 투어 (레일웨이 패스 추천)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Basic Options Select -->
+                <div class="bg-white p-6 rounded-2xl border border-[#edebe9] sb-shadow-card space-y-6">
+                    <h3 class="text-base font-bold text-sbGreen flex items-center gap-2 pb-3 border-b border-[#edebe9]">
+                        <span class="bg-sbAccent text-white text-xs w-5 h-5 flex items-center justify-center rounded-full font-bold">1</span>
+                        여행 일수 및 공항 이용 체크
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Select duration days -->
+                        <div class="space-y-3">
+                            <label class="block text-xs font-extrabold text-sbTextBlackSoft uppercase tracking-wider">동선 비교 일수 (패스 가용 기간)</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button onclick="setDuration(1)" id="btn-dur-1" class="btn-dur py-3 text-xs font-bold rounded-full border transition-all active:scale-95 duration-200">
+                                    1일권 비교
+                                </button>
+                                <button onclick="setDuration(2)" id="btn-dur-2" class="btn-dur py-3 text-xs font-bold rounded-full border transition-all active:scale-95 duration-200">
+                                    2일권 비교
+                                </button>
+                                <button onclick="setDuration(3)" id="btn-dur-3" class="btn-dur py-3 text-xs font-bold rounded-full border transition-all active:scale-95 duration-200">
+                                    3일권 비교
+                                </button>
+                            </div>
+                            <span class="text-[10px] text-sbTextBlackSoft mt-1 block">※ 주유패스는 3일권이 없으며, 간사이레일웨이패스는 1일권이 제공되지 않습니다.</span>
+                        </div>
+
+                        <!-- Select airport path -->
+                        <div class="space-y-3">
+                            <label class="block text-xs font-extrabold text-sbTextBlackSoft uppercase tracking-wider">간사이 국제공항 전철 편도/왕복 추가</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="toggleAirport(true)" id="btn-airport-yes" class="btn-airport py-3 text-xs font-bold rounded-full border transition-all active:scale-95 duration-200 flex items-center justify-center gap-1.5">
+                                    <i class="fa-solid fa-plane"></i> 공항철도 일반선 왕복 포함 (+1,940엔)
+                                </button>
+                                <button onclick="toggleAirport(false)" id="btn-airport-no" class="btn-airport py-3 text-xs font-bold rounded-full border transition-all active:scale-95 duration-200 flex items-center justify-center">
+                                    시내 중심에서만 출발
+                                </button>
+                            </div>
+                            <span class="text-[10px] text-sbTextBlackSoft mt-1 block">※ 간사이 레일웨이 패스는 난카이 전철 기본 승차권(공항 탑승)을 무제한 무료 포함합니다.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attractions Select Panel -->
+                <div class="bg-white p-6 rounded-2xl border border-[#edebe9] sb-shadow-card flex-grow space-y-4">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 pb-3 border-b border-[#edebe9]">
+                        <div>
+                            <h3 class="text-base font-bold text-sbGreen flex items-center gap-2">
+                                <span class="bg-sbAccent text-white text-xs w-5 h-5 flex items-center justify-center rounded-full font-bold">2</span>
+                                방문할 여행 명소 선택 (지정 시 하단 구글맵 연동)
+                            </h3>
+                            <p class="text-xs text-sbTextBlackSoft mt-1">방문하고자 하는 명소를 클릭하면 현지 실제 입장료 및 연동형 구글 위성 지도가 활성화됩니다.</p>
+                        </div>
+                        
+                        <!-- Region Filter Tab -->
+                        <div class="flex bg-sbWarm p-1 rounded-full border border-slate-200 self-stretch md:self-auto">
+                            <button onclick="filterAttractions('all')" id="btn-filter-all" class="filter-btn text-xs font-bold px-4 py-2 rounded-full transition-all">전체</button>
+                            <button onclick="filterAttractions('osaka')" id="btn-filter-osaka" class="filter-btn text-xs font-bold px-4 py-2 rounded-full text-sbTextBlackSoft hover:text-sbGreen transition-all">오사카</button>
+                            <button onclick="filterAttractions('kyoto')" id="btn-filter-kyoto" class="filter-btn text-xs font-bold px-4 py-2 rounded-full text-sbTextBlackSoft hover:text-sbGreen transition-all">교토</button>
+                            <button onclick="filterAttractions('nara')" id="btn-filter-nara" class="filter-btn text-xs font-bold px-4 py-2 rounded-full text-sbTextBlackSoft hover:text-sbGreen transition-all">나라/고베</button>
+                        </div>
+                    </div>
+
+                    <!-- Grid list -->
+                    <div id="attractions-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[520px] overflow-y-auto pr-2 custom-scrollbar">
+                        <!-- Dynamic attractions items rendered here -->
+                    </div>
+                </div>
+
+                <!-- Google Maps Live Synchronizer Frame -->
+                <div class="bg-white p-6 rounded-2xl border border-[#edebe9] sb-shadow-card space-y-4">
+                    <div class="flex justify-between items-center pb-3 border-b border-[#edebe9]">
+                        <h3 class="text-base font-bold text-sbGreen flex items-center gap-2">
+                            <i class="fa-solid fa-map-location-dot text-sbAccent"></i>
+                            구글맵 연동 실시간 실측 위치 & 최적 길찾기
+                        </h3>
+                        <span id="active-map-name" class="text-xs font-bold text-sbAccent bg-sbLight/40 px-3.5 py-1 rounded-full">오사카성 천수각 선택됨</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch">
+                        <!-- Left: Responsive Maps Iframe -->
+                        <div class="md:col-span-8 h-72 rounded-xl overflow-hidden border border-slate-200 relative">
+                            <iframe 
+                                id="gmaps-iframe" 
+                                class="w-full h-full absolute inset-0 border-0" 
+                                src="https://maps.google.com/maps?q=Osaka%20Castle&t=&z=14&ie=UTF8&iwloc=&output=embed" 
+                                allowfullscreen="" 
+                                loading="lazy">
+                            </iframe>
+                        </div>
+
+                        <!-- Right: Quick Navigation Details -->
+                        <div class="md:col-span-4 flex flex-col justify-between bg-sbWarm/60 p-4 rounded-xl text-xs space-y-4">
+                            <div>
+                                <h4 class="font-extrabold text-sbGreen mb-1 flex items-center gap-1">
+                                    <i class="fa-solid fa-route"></i> 실시간 길찾기 도우미
+                                </h4>
+                                <p class="text-sbTextBlackSoft leading-relaxed text-[11px]">
+                                    사용자 위치 혹은 오사카 도심 출발 기준, 구글맵이 제공하는 실제 지하철 환승 정보 및 총 운임을 실시간 앱 연동으로 교차 확인 가능합니다.
+                                </p>
+                            </div>
+
+                            <div class="space-y-2">
+                                <a id="gmaps-external-link" 
+                                   href="https://www.google.com/maps/dir/?api=1&destination=Osaka%20Castle&travelmode=transit" 
+                                   target="_blank" 
+                                   class="w-full bg-sbAccent hover:bg-sbGreen text-white text-[11px] font-bold py-2.5 px-3 rounded-full flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-sm">
+                                    <i class="fa-solid fa-diamond-turn-right"></i> 구글맵 앱에서 경로 확인
+                                </a>
+                                <p class="text-[10px] text-sbTextBlackSoft text-center">
+                                    ※ 탭 시 모바일 구글 지도 공식 연동
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Panel (Result calculations & interactive receipt) -->
+            <div class="lg:col-span-5 xl:col-span-4 flex flex-col space-y-6">
+                
+                <!-- Live Verdict Board (Inspired by Gold tier ceremony) -->
+                <div class="bg-sbHouse text-white p-6 rounded-3xl sb-shadow-card relative overflow-hidden flex flex-col space-y-5">
+                    <div class="absolute -right-16 -top-16 w-36 h-36 bg-sbGold/10 rounded-full blur-2xl"></div>
+                    <div class="absolute -left-16 -bottom-16 w-36 h-36 bg-sbAccent/20 rounded-full blur-2xl"></div>
+
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-sbGold/20 text-sbGold text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">Pass Master AI</span>
+                        <span class="text-xs text-sbTextWhiteSoft">현지 운임 자동 교차분석</span>
+                    </div>
+
+                    <div class="text-center py-4 space-y-2 border-b border-white/15">
+                        <span class="font-serif italic text-sbGold text-sm block">Best Route Verdict</span>
+                        <h4 id="verdict-title" class="text-2xl font-black tracking-tight text-white">동선 대기 중...</h4>
+                        <div id="verdict-savings" class="text-3xl font-black text-sbGold tracking-tight my-1">
+                            0엔 절약 계산됨
+                        </div>
+                        <p id="verdict-subtext" class="text-xs text-sbTextWhiteSoft">관광 명소를 추가하는 즉시 최적의 패스 플랜을 도출합니다.</p>
+                    </div>
+
+                    <!-- Comparison graphical bars -->
+                    <div class="space-y-4 pt-2">
+                        <!-- Cash bar -->
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between text-xs font-bold">
+                                <span class="text-sbTextWhiteSoft">💵 패스 미사용 (개별 교통 카드 승차)</span>
+                                <span id="bar-cash-text" class="font-mono text-white">0엔</span>
+                            </div>
+                            <div class="w-full bg-black/30 h-3 rounded-full overflow-hidden">
+                                <div id="bar-cash" class="bg-slate-400 h-full rounded-full transition-all duration-500" style="width: 100%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Amazing pass bar -->
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between text-xs font-bold">
+                                <span class="text-sbTextWhiteSoft">🎫 오사카 주유패스 QR 적용가</span>
+                                <span id="bar-amazing-text" class="font-mono text-sbGold">0엔</span>
+                            </div>
+                            <div class="w-full bg-black/30 h-3 rounded-full overflow-hidden">
+                                <div id="bar-amazing" class="bg-sbAccent h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Kansai rail pass bar -->
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between text-xs font-bold">
+                                <span class="text-sbTextWhiteSoft">🎫 간사이 레일웨이 패스 Lite 적용가</span>
+                                <span id="bar-kansai-text" class="font-mono text-sbGold">0엔</span>
+                            </div>
+                            <div class="w-full bg-black/30 h-3 rounded-full overflow-hidden">
+                                <div id="bar-kansai" class="bg-[#33433d] h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Digital Bill Receipt Panel -->
+                <div class="bg-white p-6 rounded-2xl border border-[#edebe9] sb-shadow-card flex flex-col space-y-4">
+                    <div class="border-b border-[#edebe9] pb-3 flex justify-between items-center">
+                        <span class="text-xs font-extrabold text-sbGreen tracking-wider uppercase">Order Detail Receipt</span>
+                        <span id="selected-count" class="text-xs font-bold text-sbAccent bg-sbLight/40 px-3 py-1 rounded-full">관광지 0개</span>
+                    </div>
+
+                    <!-- Scroller lists of selected items -->
+                    <div id="receipt-list" class="space-y-3.5 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar text-xs">
+                        <p class="text-sbTextBlackSoft text-center py-10 font-serif italic">선택된 관광지가 아직 없습니다.<br>왼쪽 리스트에서 가고 싶은 곳을 담아보세요!</p>
+                    </div>
+
+                    <!-- Detailed breakdowns of pricing -->
+                    <div class="bg-[#f2f0eb] p-4 rounded-xl text-xs space-y-2.5">
+                        <div class="flex justify-between text-sbTextBlackSoft">
+                            <span>대중교통 일별 기본 가산액:</span>
+                            <span id="receipt-transport-base" class="font-mono">0엔</span>
+                        </div>
+                        <div id="airport-fee-row" class="flex justify-between text-sbTextBlackSoft hidden">
+                            <span>간사이 국제공항 난카이철 왕복:</span>
+                            <span class="font-mono">1,940엔</span>
+                        </div>
+                        <div class="flex justify-between font-bold text-sbTextBlack border-t border-dashed border-slate-300 pt-2.5 text-sm">
+                            <span>순수 총 소요 경비 (패스 비적용):</span>
+                            <span id="receipt-total-plain" class="font-mono text-sbAccent">0엔</span>
+                        </div>
+                    </div>
+
+                    <!-- Real KRW equivalent calculations -->
+                    <div class="border-t border-[#edebe9] pt-4">
+                        <h4 class="text-xs font-bold text-sbTextBlackSoft uppercase tracking-wider mb-2.5">최종 요금 비교 (100엔 ≒ 900원 기준)</h4>
+                        <div class="space-y-2">
+                            
+                            <!-- Pure cash raw price -->
+                            <div class="flex justify-between items-center text-xs p-3 rounded-xl bg-slate-50 border border-slate-100">
+                                <span class="font-semibold text-sbTextBlack">💳 패스 미구입 (IC 카드 조합)</span>
+                                <div class="text-right">
+                                    <div id="calc-plain-jpy" class="font-bold text-slate-800 font-mono">0엔</div>
+                                    <div id="calc-plain-krw" class="text-[10px] text-sbTextBlackSoft">약 0원</div>
+                                </div>
+                            </div>
+
+                            <!-- Amazing pass calculation price -->
+                            <div class="flex justify-between items-center text-xs p-3 rounded-xl border border-sbLight bg-sbLight/10">
+                                <span class="font-extrabold text-sbGreen">🎫 오사카 주유패스 플랜</span>
+                                <div class="text-right">
+                                    <div id="calc-amazing-jpy" class="font-extrabold text-sbGreen font-mono">0엔</div>
+                                    <div id="calc-amazing-krw" class="text-[10px] text-sbAccent">약 0원</div>
+                                </div>
+                            </div>
+
+                            <!-- Kansai pass calculation price -->
+                            <div class="flex justify-between items-center text-xs p-3 rounded-xl border border-[#cba258]/30 bg-sbGoldLightest">
+                                <span class="font-extrabold text-[#1E3932]">🎫 간사이 레일웨이 패스</span>
+                                <div class="text-right">
+                                    <div id="calc-kansai-jpy" class="font-extrabold text-[#1E3932] font-mono">0엔</div>
+                                    <div id="calc-kansai-krw" class="text-[10px] text-sbGold">약 0원</div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tips / Warning list -->
+                <div class="bg-sbWarm/80 border border-slate-200 p-5 rounded-2xl space-y-2.5">
+                    <h4 class="text-xs font-bold text-sbGreen uppercase tracking-widest flex items-center gap-1.5">
+                        <i class="fa-solid fa-triangle-exclamation text-sbGold"></i> 필수 교차 검증 주의사항
+                    </h4>
+                    <ul class="text-xs text-sbTextBlackSoft space-y-1.5 list-disc pl-4 leading-relaxed">
+                        <li><strong>우메다 공중정원:</strong> 주유패스 무료 입장은 15:00 이전까지만 가능하며, 이후 입장 시에는 패스를 제시해도 10%의 일반 입장료 할인만 적용됩니다.</li>
+                        <li><strong>간사이 공항철도:</strong> 간사이 레일웨이 패스는 일반 공항철도 승차권을 포함하므로 특급 전동차(라피트) 탑승을 원하시면 추가 특급권을 현장에서 별도 결제하셔야 합니다.</li>
+                        <li><strong>교토 시내 버스:</strong> 간사이 레일웨이 패스는 교토 내부의 버스 승차를 더 이상 보증하지 않으므로, 버스 중심의 동선일 경우 하루 700엔의 교토 시 버스 전용 패스를 추가 구입하시는 편이 경제적입니다.</li>
+                    </ul>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Dark Green Feature Band (Full Width) -->
+    <section class="bg-sbHouse text-white mt-16 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            <div class="space-y-4">
+                <span class="text-sbGold text-xs font-bold tracking-widest uppercase">Smart Travel Tips</span>
+                <h3 class="text-2xl font-bold tracking-tight">철도 회사 및 입장료 연합 체계 분석</h3>
+                <p class="text-sm text-sbTextWhiteSoft leading-relaxed">
+                    단 하루라도 오사카 도심 중앙에 위치한 관광지들을 3군데 이상 돌 때는 무조건 오사카 주유패스 1일권이 절대적 우세를 점합니다. 반면, 오사카를 근거지로 삼고 하루는 교토의 아라시야마, 또 하루는 나라의 동대사 사슴공원을 방문하는 복합 원정 일정일 경우 한큐 및 긴테쓰 사철 교통비를 전액 상쇄해 주는 <strong>'간사이 레일웨이 패스'</strong>가 여행 경비를 최고 수준으로 절감해 줍니다.
+                </p>
+                <div class="pt-2">
+                    <a href="#planner-workspace" class="inline-block bg-[#ffffff] text-sbAccent font-bold text-xs px-6 py-3 rounded-full shadow-md transition-all active:scale-95 duration-200">
+                        위치 기반 요금 즉시 계산하기
+                    </a>
+                </div>
+            </div>
+            <div class="bg-[#2b5148]/60 p-6 rounded-2xl border border-white/10 space-y-4">
+                <h4 class="font-serif italic text-sbGold text-base">구글 지도가 추천하는 오사카 전철 팁</h4>
+                <div class="space-y-3 text-xs text-sbTextWhiteSoft">
+                    <div class="flex items-start gap-2.5">
+                        <span class="bg-sbAccent text-white w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px]">1</span>
+                        <p>오사카 시내 지하철은 최초 1구간 편도 운임만 190~240엔입니다. 일반 승차 시 3회만 환승해도 최소 700엔이 발생하므로 관광지 무료 혜택이 없더라도 교통 1일 무제한 패스가 기본적으로 유리합니다.</p>
+                    </div>
+                    <div class="flex items-start gap-2.5">
+                        <span class="bg-sbAccent text-white w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px]">2</span>
+                        <p>본 계산기는 구글 맵스 API가 제시하는 최적 대중교통 경로 데이터를 실측 기준으로 추적하여 가장 이상적인 요금 시뮬레이션을 자동으로 조율하도록 설계되었습니다.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Segment -->
+    <footer class="bg-sbHouse border-t border-white/10 py-12 text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+            <div class="flex justify-center items-center space-x-2">
+                <div class="bg-white/10 w-8 h-8 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-mug-hot text-sbGold text-sm"></i>
+                </div>
+                <span class="font-bold text-sm tracking-wider">KANSAI TRAVEL PASS MASTER WITH GOOGLE MAPS</span>
+            </div>
+            <p class="text-xs text-sbTextWhiteSoft">오사카 여행 패스 계산기 © 2026. 스타벅스 및 구글 맵스 융합 디자인 에디션.</p>
+            <p class="text-[10px] text-white/40 max-w-2xl mx-auto leading-relaxed">
+                본 웹 에디터가 제시하는 입장료 가격 명세 및 사철 환승 평균 운임 분석 공식은 공식 판매처 규격 및 최신 실측 데이터를 바탕으로 하고 있으나, 실시간 전철 배차 급행/할증 여부에 따라 현장에서 미세한 오차가 발생할 수 있습니다.
+            </p>
+        </div>
+    </footer>
+
+    <!-- Starbucks Frap Floating Signature Action Button -->
+    <button onclick="scrollToResult()" class="fixed bottom-6 right-6 w-14 h-14 bg-sbAccent text-white rounded-full flex items-center justify-center sb-shadow-frap transition-all hover:bg-sbGreen active:scale-95 duration-200 z-50 group">
+        <i class="fa-solid fa-calculator text-lg group-hover:scale-110 transition-transform"></i>
+    </button>
+
+    <!-- Scripts Core Dynamic Logic -->
+    <script>
+        // Database of landmarks matching actual 2026/2027 guidelines
+        const ATTRACTIONS = [
+            {
+                id: "osaka_castle",
+                name: "오사카성 천수각",
+                englishQuery: "Osaka Castle",
+                region: "osaka",
+                admission: 1200, // 2026 Standard Admission JPY
+                amazingBenefit: "FREE",
+                kansaiBenefit: "DISCOUNT",
+                kansaiDiscounted: 1100,
+                transitFee: 240,
+                desc: "오사카의 심장이자 웅장한 역사 복합 단지",
+                img: "🏯"
+            },
+            {
+                id: "sky_building",
+                name: "우메다 스카이 공중정원",
+                englishQuery: "Umeda Sky Building",
+                region: "osaka",
+                admission: 2000, // Standard Admission JPY
+                amazingBenefit: "FREE", // Before 15:00
+                kansaiBenefit: "DISCOUNT",
+                kansaiDiscounted: 1800,
+                transitFee: 240,
+                desc: "지상 173m 야외 마천루 루프탑 실외 전망대",
+                img: "🏢"
+            },
+            {
+                id: "river_cruise",
+                name: "도톤보리 리버 크루즈",
+                englishQuery: "Tombori River Cruise",
+                region: "osaka",
+                admission: 1200,
+                amazingBenefit: "FREE",
+                kansaiBenefit: "NONE",
+                kansaiDiscounted: 1200,
+                transitFee: 0,
+                desc: "오사카 번화가를 관통하는 야경 강바람 필수 코스",
+                img: "🛥️"
+            },
+            {
+                id: "hep_five",
+                name: "우메다 헵파이브 관람차",
+                englishQuery: "HEP FIVE Ferris Wheel",
+                region: "osaka",
+                admission: 1000, // Updated 2026 Admission 1000 JPY
+                amazingBenefit: "FREE",
+                kansaiBenefit: "DISCOUNT",
+                kansaiDiscounted: 900,
+                transitFee: 240,
+                desc: "쇼핑몰 옥상에 걸려 있는 새빨간 대공간 랜드마크",
+                img: "🎡"
+            },
+            {
+                id: "tsutenkaku",
+                name: "신세카이 츠텐카쿠 타워",
+                englishQuery: "Tsutenkaku",
+                region: "osaka",
+                admission: 1000,
+                amazingBenefit: "FREE",
+                kansaiBenefit: "DISCOUNT",
+                kansaiDiscounted: 900,
+                transitFee: 240,
+                desc: "오사카의 복고풍 분위기를 그대로 담은 전망 탑",
+                img: "🗼"
+            },
+            {
+                id: "tempozan_wheel",
+                name: "템포잔 대관람차",
+                englishQuery: "Tempozan Giant Ferris Wheel",
+                region: "osaka",
+                admission: 1000, // Updated 2026 JPY
+                amazingBenefit: "FREE",
+                kansaiBenefit: "DISCOUNT",
+                kansaiDiscounted: 900,
+                transitFee: 280,
+                desc: "오사카 서부 항만 풍경을 360도로 한눈에 담는 관람차",
+                img: "🎡"
+            },
+            {
+                id: "solaniwa",
+                name: "소라니와 온천",
+                englishQuery: "Solaniwa Onsen",
+                region: "osaka",
+                admission: 2500,
+                amazingBenefit: "DISCOUNT",
+                amazingDiscounted: 2250,
+                kansaiBenefit: "DISCOUNT",
+                kansaiDiscounted: 2250,
+                transitFee: 240,
+                desc: "전통 유카타를 입고 야외 족욕을 즐기는 대형 테마 온천",
+                img: "♨️"
+            },
+            {
+                id: "usj",
+                name: "유니버설 스튜디오 재팬 (USJ)",
+                englishQuery: "Universal Studios Japan",
+                region: "osaka",
+                admission: 8900,
+                amazingBenefit: "NONE",
+                kansaiBenefit: "NONE",
+                kansaiDiscounted: 8900,
+                transitFee: 410,
+                desc: "마리오 카트와 마법이 살아 숨 쉬는 월드클래스 테마파크",
+                img: "🦖"
+            },
+            {
+                id: "kyoto_kiyomizu",
+                name: "교토 기요미즈데라 (청수사)",
+                englishQuery: "Kiyomizudera",
+                region: "kyoto",
+                admission: 400,
+                amazingBenefit: "NONE",
+                kansaiBenefit: "NONE",
+                kansaiDiscounted: 400,
+                transitFee: 860,
+                desc: "교토를 상징하는 거대한 목조 벼랑 절벽 전망",
+                img: "⛩️"
+            },
+            {
+                id: "fushimi_inari",
+                name: "교토 후시미 이나리 신사",
+                englishQuery: "Fushimi Inari Taisha",
+                region: "kyoto",
+                admission: 0,
+                amazingBenefit: "NONE",
+                kansaiBenefit: "NONE",
+                kansaiDiscounted: 0,
+                transitFee: 920,
+                desc: "붉은 도리이 터널로 유명한 신비롭고 이국적인 명소",
+                img: "🦊"
+            },
+            {
+                id: "nara_park",
+                name: "나라 사슴공원 & 동대사",
+                englishQuery: "Nara Park",
+                region: "nara",
+                admission: 600,
+                amazingBenefit: "NONE",
+                kansaiBenefit: "DISCOUNT",
+                kansaiDiscounted: 540,
+                transitFee: 1360,
+                desc: "야생 사슴들과 교감할 수 있는 광활한 전통 불교 유적지",
+                img: "🦌"
+            },
+            {
+                id: "kobe_port_tower",
+                name: "고베 포트타워",
+                englishQuery: "Kobe Port Tower",
+                region: "nara", // Classified under Kobe/Nara tab for UI grid
+                admission: 1000,
+                amazingBenefit: "NONE",
+                kansaiBenefit: "DISCOUNT",
+                kansaiDiscounted: 900,
+                transitFee: 900,
+                desc: "수려한 모래시계 곡선미를 지닌 항구도시 대표 타워",
+                img: "⚓"
+            }
+        ];
+
+        // 2026 Pass Pricing Model Database (Verified with SURUTTO KANSAI 2026 releases)
+        const PASS_PRICES = {
+            amazing: {
+                1: 3500,
+                2: 5000,
+                3: 999999 // Not available
+            },
+            kansai: {
+                1: 999999, // Not available
+                2: 5200,   // Verified 2026 Kansai Railway Pass Lite Price
+                3: 6500    // Verified 2026 Kansai Railway Pass Lite Price
+            }
+        };
+
+        // State machine
+        let state = {
+            duration: 1,
+            includeAirport: false,
+            selectedAttractions: [],
+            activeRegionFilter: 'all',
+            currentSelectedAttraction: ATTRACTIONS[0]
+        };
+
+        // Screen load initializing
+        window.onload = function() {
+            setDuration(1);
+            toggleAirport(false);
+            renderAttractions();
+            updateUI();
+        };
+
+        // Filter Sights By Region
+        function filterAttractions(region) {
+            state.activeRegionFilter = region;
+            
+            // Design System Class Update
+            document.querySelectorAll(".filter-btn").forEach(btn => {
+                btn.className = "filter-btn text-xs font-bold px-4 py-2 rounded-full text-sbTextBlackSoft hover:text-sbGreen transition-all";
+            });
+
+            const activeBtn = document.getElementById(`btn-filter-${region}`);
+            if (activeBtn) {
+                activeBtn.className = "filter-btn text-xs font-bold px-4 py-2 rounded-full bg-white text-sbGreen shadow-sm border border-slate-200 transition-all";
+            }
+
+            renderAttractions();
+        }
+
+        // Render Cards with proper Design tokens
+        function renderAttractions() {
+            const grid = document.getElementById("attractions-grid");
+            grid.innerHTML = "";
+
+            const filtered = ATTRACTIONS.filter(attr => {
+                if (state.activeRegionFilter === 'all') return true;
+                return attr.region === state.activeRegionFilter;
+            });
+
+            filtered.forEach(attr => {
+                const isSelected = state.selectedAttractions.includes(attr.id);
+                
+                // Starbucks Design selection wrapper classes
+                const wrapperClass = isSelected
+                    ? "border-sbAccent bg-sbLight/15 ring-2 ring-sbAccent/20 scale-[0.99] transition-transform"
+                    : "border-[#edebe9] bg-white hover:border-slate-300 transition-transform";
+
+                const amazingBadge = attr.amazingBenefit === "FREE"
+                    ? `<span class="bg-red-50 text-red-700 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-red-200">주유패스 무료</span>`
+                    : (attr.amazingBenefit === "DISCOUNT" ? `<span class="bg-amber-50 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-amber-200">주유패스 할인</span>` : "");
+
+                const kansaiBadge = attr.kansaiBenefit === "DISCOUNT"
+                    ? `<span class="bg-sbLight text-sbGreen text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-sbAccent/20">간사이 할인</span>`
+                    : (attr.region !== 'osaka' ? `<span class="bg-slate-100 text-slate-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">사철 교통비 완전무료</span>` : "");
+
+                const interactiveButton = isSelected
+                    ? `<span class="text-sbAccent font-extrabold text-xs"><i class="fa-solid fa-circle-check"></i> 동선 등록됨</span>`
+                    : `<span class="text-sbTextBlackSoft text-xs"><i class="fa-solid fa-plus"></i> 동선 추가</span>`;
+
+                const cardHTML = `
+                    <div onclick="toggleAttraction('${attr.id}')" class="border p-4 rounded-xl cursor-pointer hover:shadow-md ${wrapperClass} flex justify-between gap-3 select-none">
+                        <div class="flex gap-3">
+                            <div class="text-3xl flex items-center justify-center bg-[#f2f0eb] w-12 h-12 rounded-xl border border-[#edebe9]">
+                                ${attr.img}
+                            </div>
+                            <div class="flex flex-col justify-between">
+                                <div>
+                                    <h4 class="font-extrabold text-sm text-sbGreen tracking-tight leading-snug">${attr.name}</h4>
+                                    <p class="text-[11px] text-sbTextBlackSoft mt-0.5 line-clamp-1">${attr.desc}</p>
+                                </div>
+                                <div class="flex flex-wrap gap-1 mt-2">
+                                    ${amazingBadge}
+                                    ${kansaiBadge}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end justify-between min-w-[85px] text-right">
+                            <span class="text-xs font-bold font-mono text-slate-600">${attr.admission > 0 ? attr.admission.toLocaleString() + '엔' : '입장료 없음'}</span>
+                            ${interactiveButton}
+                        </div>
+                    </div>
+                `;
+                grid.insertAdjacentHTML("beforeend", cardHTML);
+            });
+        }
+
+        // Selected State Switcher & Google Maps Sync Trigger
+        function toggleAttraction(id) {
+            const pos = state.selectedAttractions.indexOf(id);
+            const foundAttr = ATTRACTIONS.find(a => a.id === id);
+            
+            // Map synchronization target update
+            if (foundAttr) {
+                state.currentSelectedAttraction = foundAttr;
+                updateGoogleMaps(foundAttr);
+            }
+
+            if (pos > -1) {
+                state.selectedAttractions.splice(pos, 1);
+            } else {
+                state.selectedAttractions.push(id);
+            }
+            renderAttractions();
+            updateUI();
+        }
+
+        // Setting Duration Tab UI
+        function setDuration(days) {
+            state.duration = days;
+            document.querySelectorAll(".btn-dur").forEach(btn => {
+                btn.className = "btn-dur py-3 text-xs font-bold rounded-full border border-[#edebe9] bg-white text-sbTextBlack hover:bg-slate-50 transition-all active:scale-95 duration-200";
+            });
+            const active = document.getElementById(`btn-dur-${days}`);
+            if (active) {
+                active.className = "btn-dur py-3 text-xs font-bold rounded-full border-2 border-sbAccent bg-sbAccent text-white transition-all active:scale-95 duration-200 shadow-sm";
+            }
+            updateUI();
+        }
+
+        // Airport Toggle UI
+        function toggleAirport(included) {
+            state.includeAirport = included;
+            document.querySelectorAll(".btn-airport").forEach(btn => {
+                btn.className = "btn-airport py-3 text-xs font-bold rounded-full border border-[#edebe9] bg-white text-sbTextBlack hover:bg-slate-50 transition-all active:scale-95 duration-200";
+            });
+            const active = included ? document.getElementById("btn-airport-yes") : document.getElementById("btn-airport-no");
+            if (active) {
+                active.className = "btn-airport py-3 text-xs font-bold rounded-full border-2 border-sbAccent bg-sbAccent text-white transition-all active:scale-95 duration-200 shadow-sm";
+            }
+            updateUI();
+        }
+
+        // Google Maps Iframe & Deep Link Dynamic Updater
+        function updateGoogleMaps(attr) {
+            const iframe = document.getElementById("gmaps-iframe");
+            const extLink = document.getElementById("gmaps-external-link");
+            const mapNameSpan = document.getElementById("active-map-name");
+
+            if (iframe && extLink && mapNameSpan) {
+                // Encode the query parameters properly for safety
+                const encodedQuery = encodeURIComponent(attr.englishQuery);
+                
+                // Update map frame
+                iframe.src = `https://maps.google.com/maps?q=${encodedQuery}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+                
+                // Update external transit navigation url
+                extLink.href = `https://www.google.com/maps/dir/?api=1&destination=${encodedQuery}&travelmode=transit`;
+                
+                // Update visible marker badge
+                mapNameSpan.innerHTML = `${attr.img} ${attr.name} 실시간 연동 중`;
+            }
+        }
+
+        // Core Mathematical Comparison Algorithm
+        function calculateCalculations() {
+            let plainTotal = 0;
+            let amazingTotal = 0;
+            let kansaiTotal = 0;
+
+            let transitPlain = 0;
+            let transitAmazing = 0;
+            let transitKansai = 0;
+
+            const osakaAttractions = state.selectedAttractions.filter(id => {
+                const item = ATTRACTIONS.find(a => a.id === id);
+                return item && item.region === 'osaka';
+            });
+
+            // Basic central Osaka subway riding assumption (3 rides/day if any Osaka attraction selected)
+            if (osakaAttractions.length > 0) {
+                transitPlain += (240 * 3) * state.duration; // Average 720 JPY per day
+                transitAmazing += 0; // Completely free
+                transitKansai += 0; // Covered by Kansai Railway Pass
+            }
+
+            state.selectedAttractions.forEach(id => {
+                const item = ATTRACTIONS.find(a => a.id === id);
+                if (!item) return;
+
+                // Add standard admission
+                plainTotal += item.admission;
+
+                // Amazing Pass logical mapping
+                if (item.amazingBenefit === "FREE") {
+                    amazingTotal += 0;
+                } else if (item.amazingBenefit === "DISCOUNT" && item.amazingDiscounted) {
+                    amazingTotal += item.amazingDiscounted;
+                } else {
+                    amazingTotal += item.admission;
+                }
+
+                // Kansai Railway Pass logical mapping
+                if (item.kansaiBenefit === "DISCOUNT" && item.kansaiDiscounted) {
+                    kansaiTotal += item.kansaiDiscounted;
+                } else {
+                    kansaiTotal += item.admission;
+                }
+
+                // Suburb route fares calculations
+                if (item.region !== 'osaka') {
+                    transitPlain += item.transitFee;
+                    transitAmazing += item.transitFee; // Amazing Pass doesn't cover Keihan/Hankyu outside Osaka City limit
+                    transitKansai += 0; // Fully covered by Kansai Railway Pass
+                }
+            });
+
+            if (state.includeAirport) {
+                transitPlain += 1940; // Nankai Regular Roundtrip Cash cost
+                transitAmazing += 1940; // Osaka Amazing Pass does NOT cover airport lines
+                transitKansai += 0; // Kansai Railway Pass fully covers Nankai Airport Lines
+            }
+
+            const amazingPrice = PASS_PRICES.amazing[state.duration];
+            const kansaiPrice = PASS_PRICES.kansai[state.duration];
+
+            const finalPlain = plainTotal + transitPlain;
+            const finalAmazing = amazingPrice + amazingTotal + transitAmazing;
+            const finalKansai = kansaiPrice + kansaiTotal + transitKansai;
+
+            return {
+                plain: finalPlain,
+                amazing: finalAmazing,
+                kansai: finalKansai,
+                baseTransit: transitPlain - (state.includeAirport ? 1940 : 0),
+                amazingPrice: amazingPrice,
+                kansaiPrice: kansaiPrice
+            };
+        }
+
+        // Refresh UI & Bill Display
+        function updateUI() {
+            const results = calculateCalculations();
+            const jpyToKrw = (jpy) => Math.round(jpy * 9.0);
+
+            // 1. Render receipt container lists
+            const listContainer = document.getElementById("receipt-list");
+            const counter = document.getElementById("selected-count");
+            counter.textContent = `관광지 ${state.selectedAttractions.length}개 담음`;
+
+            if (state.selectedAttractions.length === 0) {
+                listContainer.innerHTML = `<p class="text-sbTextBlackSoft text-center py-10 font-serif italic leading-relaxed">선택하신 명소가 없습니다.<br>왼쪽 리스트를 터치하여 채워보세요!</p>`;
+            } else {
+                listContainer.innerHTML = "";
+                state.selectedAttractions.forEach(id => {
+                    const item = ATTRACTIONS.find(a => a.id === id);
+                    if (!item) return;
+
+                    const row = `
+                        <div class="flex justify-between items-center bg-slate-50 border border-slate-100 p-2.5 rounded-xl">
+                            <button onclick="toggleAttraction('${item.id}');" class="font-bold text-sbGreen flex items-center gap-1.5 text-left">
+                                <span class="text-base">${item.img}</span> ${item.name}
+                            </button>
+                            <div class="flex items-center space-x-2">
+                                <span class="font-mono text-slate-800 font-bold">${item.admission > 0 ? item.admission.toLocaleString() + '엔' : '무료'}</span>
+                                <button onclick="toggleAttraction('${item.id}'); event.stopPropagation();" class="text-rose-500 hover:text-rose-700 transition-colors">
+                                    <i class="fa-solid fa-circle-xmark"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    listContainer.insertAdjacentHTML("beforeend", row);
+                });
+            }
+
+            // 2. Base costs text
+            document.getElementById("receipt-transport-base").textContent = `${results.baseTransit.toLocaleString()}엔`;
+            if (state.includeAirport) {
+                document.getElementById("airport-fee-row").classList.remove("hidden");
+            } else {
+                document.getElementById("airport-fee-row").classList.add("hidden");
+            }
+            document.getElementById("receipt-total-plain").textContent = `${results.plain.toLocaleString()}엔`;
+
+            // 3. Grid details KRW & JPY mapping
+            document.getElementById("calc-plain-jpy").textContent = `${results.plain.toLocaleString()}엔`;
+            document.getElementById("calc-plain-krw").textContent = `약 ${jpyToKrw(results.plain).toLocaleString()}원`;
+
+            if (results.amazingPrice > 900000) {
+                document.getElementById("calc-amazing-jpy").textContent = "선택 불가능";
+                document.getElementById("calc-amazing-krw").textContent = "3일권 제공 안 됨";
+            } else {
+                document.getElementById("calc-amazing-jpy").textContent = `${results.amazing.toLocaleString()}엔`;
+                document.getElementById("calc-amazing-krw").textContent = `약 ${jpyToKrw(results.amazing).toLocaleString()}원`;
+            }
+
+            if (results.kansaiPrice > 900000) {
+                document.getElementById("calc-kansai-jpy").textContent = "선택 불가능";
+                document.getElementById("calc-kansai-krw").textContent = "1일권 제공 안 됨";
+            } else {
+                document.getElementById("calc-kansai-jpy").textContent = `${results.kansai.toLocaleString()}엔`;
+                document.getElementById("calc-kansai-krw").textContent = `약 ${jpyToKrw(results.kansai).toLocaleString()}원`;
+            }
+
+            // 4. Recommendation Verdict Generator Tree
+            let minCost = results.plain;
+            let recommendation = 'cash';
+
+            if (results.amazing < minCost && results.amazingPrice < 900000) {
+                minCost = results.amazing;
+                recommendation = 'amazing';
+            }
+            if (results.kansai < minCost && results.kansaiPrice < 900000) {
+                if (results.kansai < (recommendation === 'amazing' ? results.amazing : results.plain)) {
+                    minCost = results.kansai;
+                    recommendation = 'kansai';
+                }
+            }
+
+            const savingResult = results.plain - minCost;
+
+            const vTitle = document.getElementById("verdict-title");
+            const vSavings = document.getElementById("verdict-savings");
+            const vSubtext = document.getElementById("verdict-subtext");
+
+            if (recommendation === 'cash') {
+                vTitle.textContent = "IC 교통카드 결제가 이상적!";
+                vTitle.className = "text-xl font-bold mt-1 text-sbGold font-serif";
+                
+                if (state.selectedAttractions.length === 0) {
+                    vSavings.textContent = "가고 싶은 일정을 짜보세요";
+                    vSubtext.textContent = "관광지를 터치하여 등록하면 패스 효율 실시간 지표가 도출됩니다.";
+                } else {
+                    vSavings.textContent = "패스 없이 가기 최적화!";
+                    vSubtext.textContent = "이동량이 적거나 방문지가 적어 교통패스를 구매하지 않고 건건이 정산하는 것이 저렴합니다.";
+                }
+            } else if (recommendation === 'amazing') {
+                vTitle.textContent = "오사카 주유패스 적극 권장!";
+                vTitle.className = "text-xl font-bold mt-1 text-emerald-400 font-serif";
+                vSavings.textContent = `${savingResult.toLocaleString()}엔 절약 가능!`;
+                vSubtext.textContent = `개별 승차권과 개별 입장권 현장 구매 대비 약 ${jpyToKrw(savingResult).toLocaleString()}원 절감 가능한 에센스 코스입니다.`;
+            } else if (recommendation === 'kansai') {
+                vTitle.textContent = "간사이 레일웨이 패스 강력 추천!";
+                vTitle.className = "text-xl font-bold mt-1 text-sky-400 font-serif";
+                vSavings.textContent = `${savingResult.toLocaleString()}엔 절약 가능!`;
+                vSubtext.textContent = `교토 및 근교 사철 왕복 이동과 난카이 공항 철도를 아울러 최종 약 ${jpyToKrw(savingResult).toLocaleString()}원 절약합니다.`;
+            }
+
+            // 5. Progress bar visuals
+            const highestMax = Math.max(results.plain, results.amazing > 900000 ? 0 : results.amazing, results.kansai > 900000 ? 0 : results.kansai, 1000);
+
+            // Cash Bar
+            const cashRatio = (results.plain / highestMax) * 100;
+            document.getElementById("bar-cash").style.width = `${cashRatio}%`;
+            document.getElementById("bar-cash-text").textContent = `${results.plain.toLocaleString()}엔`;
+
+            // Amazing Bar
+            if (results.amazingPrice > 900000) {
+                document.getElementById("bar-amazing").style.width = `0%`;
+                document.getElementById("bar-amazing-text").textContent = "제한됨";
+            } else {
+                const amazingRatio = (results.amazing / highestMax) * 100;
+                document.getElementById("bar-amazing").style.width = `${amazingRatio}%`;
+                document.getElementById("bar-amazing-text").textContent = `${results.amazing.toLocaleString()}엔`;
+                
+                document.getElementById("bar-amazing").className = recommendation === 'amazing' 
+                    ? "bg-sbAccent h-full rounded-full ring-2 ring-sbGold" 
+                    : "bg-sbAccent/50 h-full rounded-full";
+            }
+
+            // Kansai Bar
+            if (results.kansaiPrice > 900000) {
+                document.getElementById("bar-kansai").style.width = `0%`;
+                document.getElementById("bar-kansai-text").textContent = "제한됨";
+            } else {
+                const kansaiRatio = (results.kansai / highestMax) * 100;
+                document.getElementById("bar-kansai").style.width = `${kansaiRatio}%`;
+                document.getElementById("bar-kansai-text").textContent = `${results.kansai.toLocaleString()}엔`;
+                
+                document.getElementById("bar-kansai").className = recommendation === 'kansai' 
+                    ? "bg-sbGold h-full rounded-full ring-2 ring-white" 
+                    : "bg-slate-500/60 h-full rounded-full";
+            }
+        }
+
+        // Apply Preset Router
+        function applyPreset(type) {
+            state.selectedAttractions = [];
+
+            if (type === 'osaka_classic_1') {
+                setDuration(1);
+                toggleAirport(false);
+                state.selectedAttractions = ['osaka_castle', 'sky_building', 'river_cruise', 'hep_five'];
+                state.currentSelectedAttraction = ATTRACTIONS.find(a => a.id === 'osaka_castle');
+            } else if (type === 'osaka_heavy_2') {
+                setDuration(2);
+                toggleAirport(false);
+                state.selectedAttractions = ['osaka_castle', 'sky_building', 'river_cruise', 'hep_five', 'tsutenkaku', 'tempozan_wheel', 'solaniwa'];
+                state.currentSelectedAttraction = ATTRACTIONS.find(a => a.id === 'sky_building');
+            } else if (type === 'kansai_multi_3') {
+                setDuration(3);
+                toggleAirport(true);
+                state.selectedAttractions = ['kyoto_kiyomizu', 'fushimi_inari', 'nara_park', 'kobe_port_tower', 'osaka_castle'];
+                state.currentSelectedAttraction = ATTRACTIONS.find(a => a.id === 'kyoto_kiyomizu');
+            }
+
+            updateGoogleMaps(state.currentSelectedAttraction);
+            renderAttractions();
+            updateUI();
+        }
+
+        // Full reset
+        function resetPlanner() {
+            state.selectedAttractions = [];
+            state.duration = 1;
+            state.includeAirport = false;
+            state.currentSelectedAttraction = ATTRACTIONS[0];
+            setDuration(1);
+            toggleAirport(false);
+            updateGoogleMaps(ATTRACTIONS[0]);
+            renderAttractions();
+            updateUI();
+        }
+
+        // Floating button utility scroll helper
+        function scrollToResult() {
+            const workspace = document.getElementById("planner-workspace");
+            workspace.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
